@@ -89,7 +89,9 @@ function BMI() {
 //                                      - - - - - -
 //
 function BNE() {
-  throw 'BNE not implemented';
+  if ( Z ) {
+    PC = M
+  }
 }
 
 
@@ -300,7 +302,7 @@ function JSR() {
 //                                      + + - - - -
 //
 function LDA() {
-  throw 'LDA not implemented';
+  FLAG_NZ(AC = M)
 }
 
 
@@ -479,7 +481,7 @@ function SEI() {
 //                                      - - - - - -
 //
 function STA() {
-  throw 'STA not implemented';
+  store(M, AC);
 }
 
 
@@ -489,7 +491,7 @@ function STA() {
 //                                      - - - - - -
 //
 function STX() {
-  throw 'STX not implemented';
+  store(M, X);
 }
 
 
@@ -499,7 +501,7 @@ function STX() {
 //                                      - - - - - -
 //
 function STY() {
-  throw 'STY not implemented';
+  store(M, Y);
 }
 
 
@@ -509,7 +511,8 @@ function STY() {
 //                                      + + - - - -
 //
 function TAX() {
-  throw 'TAX not implemented';
+  X = AC;
+  // FLAG_NZ(X);
 }
 
 
@@ -539,7 +542,7 @@ function TSX() {
 //                                      + + - - - -
 //
 function TXA() {
-  A = X
+  FLAG_NZ(A = X);
 }
 
 

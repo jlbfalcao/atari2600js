@@ -1,15 +1,82 @@
 <html>
 
 <head>
-<script src="Pacman.js"></script>
-<script src="6507.js"></script>
-<script src="instructions.js" ></script>
-<script src="opscode.js"></script>
+  <script src="src/instructions.js" ></script>
+  <script src="src/opscode.js"></script>
+  <script src="Pacman.js"></script>
+  <script src="src/6507.js"></script>
 
+<style>
+body {
+  font-family: arial;
+}
+#debug {
+  padding: 1em;
+  width: 150px;
+  border: 1px solid #ddd; ; float: right;
+}
+#debug dl {
+  margin:0;
+}
+#debug dt {
+  clear: both;
+  width: 50px;
+  float: left;
+}
+#debug dd {
+  float: left;
+}
+#debug h3 {
+  margin: 0;
+  margin-bottom: 0.5em;
+  clear: both;
+}
+.flags td {
+  width: 14px;
+  text-align: center;
+}
+.flags td.on {
+  background: red;
+  color: white;
+}
+
+</style>
 
 </head>
 <body>
-  
-  <img src="Pacman.bin" id="rom" />
+  <div id="memory">
+  </div>
+  <div id="debug">
+    <h3>Registers</h3>
+    <dl>
+      <dt>AC</dt>
+      <dd id="AC"></dd>
+      <dt>PC</dt>
+      <dd id="PC"></dd>
+      <dt>X</dt>
+      <dd id="X"></dd>
+      <dt>Y</dt>
+      <dd id="Y"></dd>
+      <dt>SR</dt>
+      <dd id="SR"></dd>
+      <dt>SP</dt>
+      <dd id="SP"></dd>
+
+    </dl>
+    <h3>Flags</h3>
+    <table border="1" class="flags">
+      <tr>
+        <td id="N">N</td>
+        <td id="O">O</td>
+        <td id="B">B</td>
+        <td id="D">D</td>
+        <td id="I">I</td>
+        <td id="Z">Z</td>
+        <td id="C">C</td>
+      </tr>
+    </table>
+    
+  </div>
+
 </body>
 </html>

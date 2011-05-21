@@ -19,6 +19,20 @@ function hex(v) {
   return "0x" + Number(v).toString(16);
 }
 
+function setFlag(f, v) {
+  var el = document.getElementById(f);
+  if (el) {
+    el.className = (v) ? 'on' : '';
+  }
+}
+
+function update(i,v) {
+  var el = document.getElementById(i);
+  if (el) {
+    el.innerHTML = hex(v);
+  }
+}
+
 function define(bits) {
   var _v = 0;
   return function(v) {
@@ -94,12 +108,16 @@ function addrmode(mode) {
     case "absolute,Y":
       return $(fetchNextWord()+$Y());
     break;
+    case "relative":
+      return $($PC() + fetchNextByte());
     case "(indirect,X)":
       return $($(fetchNextWord()+$X()));
     break;
     case "(indirect),Y":
       return $($(fetchNextWord())+$Y());
     break;
+    case "accumulator":
+      return $AC();
     case "implied":
       return 0;
     default:
@@ -185,40 +203,25 @@ function fname(v) {
   return "_" + new Number(v).toString(16);
 }
 
-// var _6507 = (function() {
-//   return {
+// var optcodes = [];
 // 
+// function opt(opcode, f, addr) {
+//   console.debug(opcode)
+//   optcodes[opcode] = function() {
+//     var $M; // memory address.
+//     var M = addrmode(addr); // memory value.
+//     eval("var _f = " + f.toString());
+//     return _f();
 //   }
-// })();
+// }
 
-var optcodes = []
-
-function opt(opcode, f, addr) {
-  var fn = fname(opcode)
-  // console.debug("define", fn)
-  window[fn] = function() {
-    var m = addrmode(addr);
-    f.apply(window, [m]);
-  }
-}
-
-function execute(opcode) {
-  if (typeof window[fname(opcode)] == 'function') {
-
-    var $M // memory address.
-    var M; // memory value.
-
-    var Y, X, PC, AC, SR, SP; // registers
-    var N, V, B, D, I, Z, C; // flags
-
-    eval("var f = " + window[fname(opcode)].toString());
-
-    $PC.inc();
-
-  } else {
-    throw fname(opcode) + "don't exists";
-  }
-}
+// function execute(opcode) {
+//   if (typeof window[fname(opcode)] == 'function') {
+//     window[fname(opcode)]();
+//   } else {
+//     throw fname(opcode) + "don't exists";
+//   }
+// }
 
 
 CLOCK = (function(clk) {
@@ -254,20 +257,87 @@ CLOCK.add(function() {
 // CLOCK.start();
 
 
+var _6507 = (function() {
+  
+  var memory = []; // memory.
+  
+  var $M // memory address.
+  var M; // memory value.
 
-function A() {
-  console.debug(c);
+  var Y, X, PC = 0, AC, SR, SP; // registers
+  var N, V, B, D, I, Z, C; // flags
+
+  function fetch( offset ) { // fetch byte.
+    var addr = PC + (offset || 0); 
+    // console.debug("fetch at", hex(addr), "value", hex(memory[addr]))
+    return memory[addr] & 0xff;
+  }
+  
+  // store byte.
+  function store(addr, value) {
+    memory[addr] = value & 0xff;
+  }
+
+  // flag N or Z 
+  function FLAG_NZ(v) {
+    N = !!(v & 0x80); //8th bit?
+    Z = !!(v == 0)
+  }
+  
+  // add function to 6507 scope.
+  var optcodes = []
+  for( var i in _optcodes ) {
+    // console.debug(i, _optcodes[i])
+    if (_optcodes[i] != undefined) {
+      // console.debug(_optcodes[i])
+      optcodes[i] = _optcodes[i];
+      eval("optcodes[" + i + "].f = " + _optcodes[i].f.toString());
+    }
+  }
+
+
+
+
+  // console.debug(optcodes)
+
+  return {
+    load: function(rom) {
+      memory = rom; // wrong!
+    },
+    
+    run: function() {
+      for( var i = 0; i < 50; i++ ) {
+        this.step();
+      }
+    },
+    
+    step: function() {
+      var optcode = fetch();
+      if ( typeof optcodes[optcode] == "object") {
+        console.warn(hex(optcode), optcodes[optcode].f.prototype, optcodes[optcode].addr)
+        // console.debug(optcodes[optcode].addr)
+        // console.debug(optcodes[optcode].bytes)
+        var r = optcodes[optcode].f();
+        // USE RETURN TO CHANGE FLAGS?
+        
+        PC += optcodes[optcode].bytes;
+      } else {
+        console.error("method ", [hex(optcode), "don't exist"].join(" "))
+      }
+    }
+  }
+
+})();
+
+
+_6507.load(Pacman);
+window.onload = function() {
+  _6507.foo = function() {
+    console.debug(PC)
+  }
+  _6507.foo();
+  _6507.run();
 }
-
-function b() {
-  var c = 2;
-  eval("f = " + A.toString());
-  console.debug(f)
-  f()
-}
-b();
-
-
 
 
 
