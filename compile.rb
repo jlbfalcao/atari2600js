@@ -7,12 +7,14 @@ start_def = false
 # 
 addrmode = []
 assemblers = []
+flags = []
 
 puts "var _optcodes = [];"
 File.open("instructions.txt", "r").each_line do |l|
   if (l =~ /^[A-Z]/)
     puts "\n\n"
     puts "// #{l}"
+    flags = []
     start_def = false
     current = l
   elsif start_def
@@ -27,13 +29,20 @@ File.open("instructions.txt", "r").each_line do |l|
       cycles = cycles.to_i
       
       # assembler = (cyles.nil?) ? cyles 
-      puts "_optcodes[0x#{opc}] = {f: #{assembler}, addr: '#{addressing}', cycles: #{cycles}, bytes: #{bytes}};"
+      puts "_optcodes[0x#{opc}] = {f: #{assembler}, addr: '#{addressing}', cycles: #{cycles}, bytes: #{bytes}, flags: '#{flags.join(',')}'}};"
       assemblers << assembler
       addrmode << addressing
     end
   elsif current
     if l =~ /------/
       start_def = true
+    elsif l =~ /([\+-] ?){6}/
+      f = 'N Z C I D V'.split ' '
+      l = l.strip!.split(" ").map {|i| i == '+'}
+      l.each_with_index {|e,i| flags << f[i] if e }
+      # p flags.join(",")
+      # p l
+      
     end
   end
 end
