@@ -9,7 +9,7 @@ addrmode = []
 assemblers = []
 flags = []
 
-puts "var _optcodes = [];"
+puts "var _opcodes = [];"
 File.open("instructions.txt", "r").each_line do |l|
   if (l =~ /^[A-Z]/)
     puts "\n\n"
@@ -29,7 +29,7 @@ File.open("instructions.txt", "r").each_line do |l|
       cycles = cycles.to_i
       
       # assembler = (cyles.nil?) ? cyles 
-      puts "_optcodes[0x#{opc}] = {f: #{assembler}, addr: '#{addressing}', cycles: #{cycles}, bytes: #{bytes}, flags: '#{flags.join(',')}'}};"
+      puts "_opcodes[0x#{opc}] = {f: #{assembler}, addr: '#{addressing}', cycles: #{cycles}, bytes: #{bytes}, flags: '#{flags.join(',')}'};"
       assemblers << assembler
       addrmode << addressing
     end
