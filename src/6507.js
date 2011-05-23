@@ -259,6 +259,8 @@ CLOCK.add(function() {
 
 var _6507 = (function() {
   
+  // 100h - 1FFh.Stack
+  
   var memory = []; // memory.
   
   var $M // memory address.
@@ -268,7 +270,7 @@ var _6507 = (function() {
   var N, V, B, D, I, Z, C; // flags
 
   function fetch( offset ) { // fetch byte.
-    var addr = PC + (offset || 0); 
+    var addr = fetch || PC; 
     // console.debug("fetch at", hex(addr), "value", hex(memory[addr]))
     return memory[addr] & 0xff;
   }
@@ -296,8 +298,6 @@ var _6507 = (function() {
   }
 
 
-
-
   // console.debug(optcodes)
 
   return {
@@ -314,9 +314,25 @@ var _6507 = (function() {
     step: function() {
       var optcode = fetch();
       if ( typeof optcodes[optcode] == "object") {
-        console.warn(hex(optcode), optcodes[optcode].f.prototype, optcodes[optcode].addr)
+        var addr = optcodes[optcode].addr;
+        console.warn(hex(optcode), optcodes[optcode].f.prototype, addr);
         // console.debug(optcodes[optcode].addr)
         // console.debug(optcodes[optcode].bytes)
+        
+        switch(addr) {
+          case "implied":break;
+          case "immidiate":
+            M = fetch(PC+1); break;
+          case "zeropage,X":
+            var addr = fetch(PC+1);
+            M = fetch(addr + X);
+            break;
+          default:
+            throw ["unknown ", addr, " mode"].join("");
+        }
+        
+        
+        
         var r = optcodes[optcode].f();
         // USE RETURN TO CHANGE FLAGS?
         
