@@ -1,38 +1,11 @@
 
-// var req = new XMLHttpRequest();
-// req.open('GET', '/Pacman.bin', false);
-// req.overrideMimeType('text/plain; charset=x-user-defined');
-// req.send(null);
-// // if (req.status != 200) throwException(_exception.FileLoadFailed);
-// 
-// fileContents = req.responseText;
-// fileSize = fileContents.length;
-// 
-// console.debug(fileContents)
-
-  // this.readByteAt = function(i){
-  //  return fileContents.charCodeAt(i) & 0xff;
-  // }
-  // 
-
+// format hex.
 function hex(v) {
   return "0x" + Number(v).toString(16);
 }
 
-function setFlag(f, v) {
-  var el = document.getElementById(f);
-  if (el) {
-    el.className = (v) ? 'on' : '';
-  }
-}
 
-function update(i,v) {
-  var el = document.getElementById(i);
-  if (el) {
-    el.innerHTML = hex(v);
-  }
-}
-
+// old.
 function define(bits) {
   var _v = 0;
   return function(v) {
@@ -67,6 +40,7 @@ $ = (function(rom) {
   }
 })(Pacman); // loading rom.
 
+// OLD stuff.
 $PC = define(16);
 $AC = define(8);
 $X = define(8);
@@ -75,11 +49,13 @@ $SR = define(8);
 $SP = define(8);
 
 Function.prototype.inc = function() {
+  // funny things :P
   if (this == $PC) {
     $PC($PC() + 1);
   }
 }
 
+// old stuff
 function fetchNextByte() {
   $PC.inc();
   return $($PC());
@@ -125,6 +101,7 @@ function addrmode(mode) {
   }
 }
 
+// experimental.
 function bitFlag(pos) {
   return function(v) {
     if ( this == $SR ) {
@@ -180,6 +157,7 @@ Function.prototype.C = bitFlag(0); // Carry
 // Zero (Z) - set if the result is zero.
 // Carry (C) - set if there was a carry from or borrow to during last result calculation.
 
+
 var $$ = (function() {
   var opscode = [];
   return function(opc, f) {
@@ -199,63 +177,6 @@ var $$ = (function() {
   }
 })();
 
-function fname(v) {
-  return "_" + new Number(v).toString(16);
-}
-
-// var optcodes = [];
-// 
-// function opt(opcode, f, addr) {
-//   console.debug(opcode)
-//   optcodes[opcode] = function() {
-//     var $M; // memory address.
-//     var M = addrmode(addr); // memory value.
-//     eval("var _f = " + f.toString());
-//     return _f();
-//   }
-// }
-
-// function execute(opcode) {
-//   if (typeof window[fname(opcode)] == 'function') {
-//     window[fname(opcode)]();
-//   } else {
-//     throw fname(opcode) + "don't exists";
-//   }
-// }
-
-
-CLOCK = (function(clk) {
-  var cbl = []; // callback list.
-  var _step = function() {
-    for( var i = 0; i < cbl.length; i++ ) {
-      try {
-        cbl[i].apply(window);
-      } catch (e) {
-        console.error(e);
-        return;
-      }
-    }
-    setTimeout(_step, clk);
-  };
-  return {
-    add:function(step) {
-      cbl.push(step);
-    },
-    start: function() {
-      setTimeout(_step, clk);
-    }
-  }
-})(100); // 100hz :)
-  
-
-CLOCK.add(function() {
-  var i = $PC(); // get PC
-  var opc = $(i); // get opc
-  console.debug("PC:", i, "OPC:", hex(opc)); // TODO: convert to hex.
-  execute(opc);
-});
-// CLOCK.start();
-
 
 var _6507 = (function() {
   
@@ -265,12 +186,23 @@ var _6507 = (function() {
   
   var $M // memory address.
   var M; // memory value.
+  
+  var flags = "N,V,B,D,I,Z,C".split(",");
+  for( var i in flags ) {
+    // console.debug(flags[i])
+    eval("var " + flags[i] + " = 0;");
+  }
+  var registers = "Y,X,PC,AC,SR,SP".split(",");
+  for( var i in registers ) {
+    // console.debug(registers[i])
+    eval("var " + registers[i] + " = 0;");
+  }
 
-  var Y, X, PC = 0, AC, SR, SP; // registers
-  var N, V, B, D, I, Z, C; // flags
+  // var Y = 0, X = 0, PC = 0, AC = 0, SR = 0, SP = 0; // registers
+  // var N, V, B, D, I, Z, C; // flags
 
   function fetch( offset ) { // fetch byte.
-    var addr = fetch || PC; 
+    var addr = offset || PC;
     // console.debug("fetch at", hex(addr), "value", hex(memory[addr]))
     return memory[addr] & 0xff;
   }
@@ -287,20 +219,42 @@ var _6507 = (function() {
   }
   
   // add function to 6507 scope.
-  var optcodes = []
+  var opcodes = []
   for( var i in _optcodes ) {
     // console.debug(i, _optcodes[i])
     if (_optcodes[i] != undefined) {
       // console.debug(_optcodes[i])
-      optcodes[i] = _optcodes[i];
-      eval("optcodes[" + i + "].f = " + _optcodes[i].f.toString());
+      opcodes[i] = _optcodes[i];
+      eval("opcodes[" + i + "].f = " + _optcodes[i].f.toString());
     }
   }
 
 
   // console.debug(optcodes)
+  var updateEl = function(id, value) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.innerHTML = value;
+    }
+  }
+
 
   return {
+
+    debug: function() {
+      for( var i in registers ) {
+        var r = registers[i];
+        updateEl(r, hex(eval(r)));
+      }
+      for( var i in flags ) {
+        var f = flags[i];
+        var el = document.getElementById(f);
+        if (el) {
+          el.className = (eval(f)) ? 'on' : '';
+        }
+      }
+    },
+    
     load: function(rom) {
       memory = rom; // wrong!
     },
@@ -312,10 +266,11 @@ var _6507 = (function() {
     },
     
     step: function() {
-      var optcode = fetch();
-      if ( typeof optcodes[optcode] == "object") {
-        var addr = optcodes[optcode].addr;
-        console.warn(hex(optcode), optcodes[optcode].f.prototype, addr);
+      var opcode = fetch();
+      console.debug(hex(opcode))
+      if ( typeof opcodes[opcode] == "object") {
+        var addr = opcodes[opcode].addr;
+        console.warn(hex(opcode), opcodes[opcode].f.prototype, addr);
         // console.debug(optcodes[optcode].addr)
         // console.debug(optcodes[optcode].bytes)
         
@@ -330,28 +285,21 @@ var _6507 = (function() {
           default:
             throw ["unknown ", addr, " mode"].join("");
         }
-        
-        
-        
-        var r = optcodes[optcode].f();
+
+        var r = opcodes[opcode].f();
         // USE RETURN TO CHANGE FLAGS?
-        
-        PC += optcodes[optcode].bytes;
+        PC += opcodes[opcode].bytes;
+        this.debug();
       } else {
-        console.error("method ", [hex(optcode), "don't exist"].join(" "))
+        console.error("method ", [hex(opcode), "don't exist"].join(" "))
       }
     }
   }
-
 })();
 
 
 _6507.load(Pacman);
 window.onload = function() {
-  _6507.foo = function() {
-    console.debug(PC)
-  }
-  _6507.foo();
   _6507.run();
 }
 
