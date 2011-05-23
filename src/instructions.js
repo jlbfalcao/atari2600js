@@ -26,7 +26,15 @@ function AND() {
 //                                      + + + - - -
 //
 function ASL() {
-  throw 'ASL not implemented';
+  if ( addrmode == "accumulator" ) {
+    AC <<= 1;
+    if (AC & 0x100) {
+      C = 1
+    }
+    FLAG_NZ(AC)
+  } else {
+    throw 'ASL (width memory) not implemented';
+  }
 }
 
 
@@ -36,7 +44,9 @@ function ASL() {
 //                                      - - - - - -
 //
 function BCC() {
-  throw 'BCC not implemented';
+  if (!C) {
+    PC = M
+  }
 }
 
 
@@ -46,7 +56,9 @@ function BCC() {
 //                                      - - - - - -
 //
 function BCS() {
-  throw 'BCS not implemented';
+  if (C) {
+    PC = M
+  }
 }
 
 
@@ -56,7 +68,9 @@ function BCS() {
 //                                      - - - - - -
 //
 function BEQ() {
-  throw 'BEQ not implemented';
+  if (Z) {
+    PC = M
+  }
 }
 
 
@@ -211,7 +225,7 @@ function CPY() {
 //                                      + + - - - -
 //
 function DEC() {
-  throw 'DEC not implemented';
+  M--
 }
 
 
@@ -292,7 +306,9 @@ function JMP() {
 //     (PC+2) -> PCH
 //
 function JSR() {
-  throw 'JSR not implemented';
+  push(PC+2) // TODO: check if +2 is correct.
+  PC = $$(PC+1)
+  console.debug("JSR to", hex(PC))
 }
 
 
@@ -542,7 +558,7 @@ function TSX() {
 //                                      + + - - - -
 //
 function TXA() {
-  FLAG_NZ(A = X);
+  AC = X
 }
 
 
@@ -552,8 +568,7 @@ function TXA() {
 //                                      + + - - - -
 //
 function TXS() {
-  // TODO: adiciona X no stack ou o valor para Stack Register
-  $SP($X());
+  SP = X
 }
 
 

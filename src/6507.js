@@ -4,57 +4,6 @@ function hex(v) {
   return "0x" + Number(v).toString(16);
 }
 
-
-// old.
-function define(bits) {
-  var _v = 0;
-  return function(v) {
-    if( typeof v == "undefined" ) {
-      return _v;
-    } else {
-      // FLAG!
-      if (bits == 8) {
-        _v = v && 0xff;
-        $SP.Z(_v == 0)
-        $SP.N(!(_v & 0x80)); // TODO: check if byte 8 is signal.
-      } else {
-        _v = v & 0xffff;
-      }
-      // _v = v & ((bits == 8) ? 0xff : 0xffff);
-    }
-  }
-}
-
-// Read/Write Byte.
-$ = (function(rom) {
-  var lastPosition = 0;
-  var memory = Pacman || [];
-  return function(addr, value) {
-    if (typeof value == "undefined") {
-      // just read.
-      return memory[addr] & 0xff;
-    } else {
-      // write
-      memory[addr] = value & 0xff
-    }
-  }
-})(Pacman); // loading rom.
-
-// OLD stuff.
-$PC = define(16);
-$AC = define(8);
-$X = define(8);
-$Y = define(8);
-$SR = define(8);
-$SP = define(8);
-
-Function.prototype.inc = function() {
-  // funny things :P
-  if (this == $PC) {
-    $PC($PC() + 1);
-  }
-}
-
 // old stuff
 function fetchNextByte() {
   $PC.inc();
@@ -101,41 +50,7 @@ function addrmode(mode) {
   }
 }
 
-// experimental.
-function bitFlag(pos) {
-  return function(v) {
-    if ( this == $SR ) {
-      var c = this();
-      if (typeof v == "undefined") {
-        return (c >> pos) & (0x01);
-      } else {
-        if (!!v) {
-          this(c | (1 << pos));
-        } else {
-          this(c & ((1 << pos) ^ 0xff));
-        }
-      }
-    }
-  }
-}
 
-// SR flags
-Function.prototype.N = bitFlag(7); // Negative
-Function.prototype.V = bitFlag(6); // Overflow
-Function.prototype._ = bitFlag(5); // ignored
-Function.prototype.B = bitFlag(4); // Break
-Function.prototype.D = bitFlag(3); // Decimal
-Function.prototype.I = bitFlag(2); // Interrupt
-Function.prototype.Z = bitFlag(1); // Zero
-Function.prototype.C = bitFlag(0); // Carry
-
-
-// console.debug("should be 0", $SR.N())
-// console.debug($SR.N(1))
-// console.debug("should be 1", $SR.N())
-// console.debug("should be 128", $SR())
-// console.debug($SR.N(0))
-// console.debug("should be 0", $SR.N())
 
 // 8 KB
 // JUMP +-127
@@ -157,32 +72,29 @@ Function.prototype.C = bitFlag(0); // Carry
 // Zero (Z) - set if the result is zero.
 // Carry (C) - set if there was a carry from or borrow to during last result calculation.
 
-
-var $$ = (function() {
-  var opscode = [];
-  return function(opc, f) {
-    if ( typeof f == "undefined" ) {
-      if (typeof opscode[opc] == "function") {
-        var pc = $PC();
-        opscode[opc].apply(window);
-        $PC.inc(); // next.
-        console.debug($PC() - pc, "bytes")
-      } else {
-        throw ["0x", hex(opc), " not implemented"].join("")
-      }
-    } else {
-      // register
-      opscode[opc] = f;
-    }
-  }
-})();
-
-
 var _6507 = (function() {
   
   // 100h - 1FFh.Stack
   
   var memory = []; // memory.
+  
+  // byte.
+  var $ = function(addr) {
+    return memory[addr];
+  }
+
+  // word
+  var $$ = function(addr) {
+    return memory[addr] << 8 | (memory[addr+1]);
+  }
+  
+  // sanity test.
+  // memory[2] = 0xab;
+  // memory[3] = 0xcd;
+  // console.info(hex($(2)))
+  // console.info(hex($$(2)))
+
+  var addrmode;
   
   var $M // memory address.
   var M; // memory value.
@@ -197,19 +109,26 @@ var _6507 = (function() {
     // console.debug(registers[i])
     eval("var " + registers[i] + " = 0;");
   }
-
+  SP = 0x100; // stack pointer
+  
+  // 2byte stack (from 0xff -> 0x100)
+  function push(v) {
+    memory[SP] = v & 0xff;
+    memory[SP+1] = (v & 0xff00) >> 0;
+    SP+=2
+    // TODO: check > 0x100 + 256
+  }
+  function pop() {
+    var v = memory[SP-2] & ((memory[SP-1] << 0) & 0xff00);
+    SP-=2
+  }
+  
   // var Y = 0, X = 0, PC = 0, AC = 0, SR = 0, SP = 0; // registers
   // var N, V, B, D, I, Z, C; // flags
 
-  function fetch( offset ) { // fetch byte.
-    var addr = offset || PC;
-    // console.debug("fetch at", hex(addr), "value", hex(memory[addr]))
-    return memory[addr] & 0xff;
-  }
-  
   // store byte.
-  function store(addr, value) {
-    memory[addr] = value & 0xff;
+  function store(_addr, value) {
+    memory[_addr] = value & 0xff;
   }
 
   // flag N or Z 
@@ -220,12 +139,12 @@ var _6507 = (function() {
   
   // add function to 6507 scope.
   var opcodes = []
-  for( var i in _optcodes ) {
+  for( var i in _opcodes ) {
     // console.debug(i, _optcodes[i])
-    if (_optcodes[i] != undefined) {
+    if (_opcodes[i] != undefined) {
       // console.debug(_optcodes[i])
-      opcodes[i] = _optcodes[i];
-      eval("opcodes[" + i + "].f = " + _optcodes[i].f.toString());
+      opcodes[i] = _opcodes[i];
+      eval("opcodes[" + i + "].f = " + _opcodes[i].f.toString());
     }
   }
 
@@ -253,6 +172,18 @@ var _6507 = (function() {
           el.className = (eval(f)) ? 'on' : '';
         }
       }
+      
+      
+      // var t = document.getElementById("mem");
+      // for (var i in memory) {
+      //   var td = document.createElement("td");
+      //   td.innerHTML = hex(memory[i])
+      //   t.rows[1].appendChild(td)
+      //   td = document.createElement("th");
+      //   td.innerHTML = hex(i)
+      //   t.rows[0].appendChild(td)
+      // 
+      // }
     },
     
     load: function(rom) {
@@ -260,35 +191,96 @@ var _6507 = (function() {
     },
     
     run: function() {
-      for( var i = 0; i < 50; i++ ) {
-        this.step();
-      }
+      // for( var i = 0; i < 50; i++ ) {
+      //   this.step();
+      // }
     },
     
     step: function() {
-      var opcode = fetch();
-      console.debug(hex(opcode))
+      var opcode = $(PC);
       if ( typeof opcodes[opcode] == "object") {
-        var addr = opcodes[opcode].addr;
-        console.warn(hex(opcode), opcodes[opcode].f.prototype, addr);
+        addrmode = opcodes[opcode].addr;
+        bytes = opcodes[opcode].bytes;
+        console.warn(opcodes[opcode].f.prototype, addrmode);
+
+        if (bytes == 1) {
+          console.debug(hex(opcode))
+        } else if (bytes == 2) {
+          console.debug(hex(opcode), hex($(PC+1)))
+        } else if (bytes == 3) {
+          console.debug(hex(opcode), hex($(PC+1)), hex($(PC+2)))
+        }
         // console.debug(optcodes[optcode].addr)
         // console.debug(optcodes[optcode].bytes)
-        
-        switch(addr) {
+
+        switch(addrmode) {
+          case "accumulator": break;
           case "implied":break;
           case "immidiate":
-            M = fetch(PC+1); break;
+            $M = PC+1;
+            M = $($M); break;
+          case "zeropage":
+            $M = $(PC+1)
+            M = $($M);
+            break;
           case "zeropage,X":
-            var addr = fetch(PC+1);
-            M = fetch(addr + X);
+            $M = $(PC+1) + X
+            M = $($M);
+            break;
+          case "absolute":
+            $M = $$(PC+1)
+            M = $($M)
+          case "relative":
+            $M = PC+1
+            M = $($M);
             break;
           default:
-            throw ["unknown ", addr, " mode"].join("");
+            throw ["unknown ", addrmode, " mode"].join("");
+        }
+        
+        console.debug("$M", hex($M), "value=", hex(M));
+        
+        // save current status.
+        for( var i in registers ) {
+          // console.debug(registers[i], eval(registers[i]))
+          eval("var _" + registers[i] + " = " + registers[i] + ";");
+        }
+        var _M = M; // memory value.
+        
+        // console.debug("opcode:", addr)
+        var r = opcodes[opcode].f();
+        
+        // memory changed.
+        if (_M != M) {
+          memory[$M] = M
+          console.debug("changed memory", hex(M), hex(_M), "at", hex($M))
         }
 
-        var r = opcodes[opcode].f();
-        // USE RETURN TO CHANGE FLAGS?
-        PC += opcodes[opcode].bytes;
+        for( var i in registers ) {
+          // console.debug(registers[i], eval(registers[i]))
+          eval("var changed = _" + registers[i] + " != " + registers[i] + ";");
+          if (changed) {
+            // set negative flag
+            if ( opcodes[opcode].flags.indexOf("N") != -1 ) {
+              if (eval(registers[i]) & 0x80) { // 8th bit?
+                N = 1;
+              }
+            }
+            // set zero flag
+            if ( opcodes[opcode].flags.indexOf("Z") != -1 ) {
+              if (eval(registers[i]) == 0) {
+                Z = 1;
+              }
+            }
+            // console.warn(registers[i], "changed", opcodes[opcode].flags, opcodes[opcode].flags.indexOf("N"))
+          }
+        }
+
+        // isn't a branch
+        if ( PC == _PC ) {
+          PC += opcodes[opcode].bytes;
+        }
+        
         this.debug();
       } else {
         console.error("method ", [hex(opcode), "don't exist"].join(" "))
@@ -300,7 +292,14 @@ var _6507 = (function() {
 
 _6507.load(Pacman);
 window.onload = function() {
-  _6507.run();
+  // 
+  document.getElementById("step").onclick = function() {
+    try {
+      _6507.step();
+    } catch (e) {
+      console.debug(e)
+    }
+  }
 }
 
 

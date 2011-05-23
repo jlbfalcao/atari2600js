@@ -39,13 +39,30 @@ body {
   background: red;
   color: white;
 }
-
+#memory {
+  
+}
+#mem {
+  position: absolute;
+  
+}
+#mem td, #mem th {
+  width: 10px;
+  text-align: center;
+  font-size: 0.7em;
+  font-family: monaco;
+}
+#mm {
+  width: 500px;
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+}
 </style>
 
 </head>
 <body>
-  <div id="memory">
-  </div>
+
   <div id="debug">
     <h3>Registers</h3>
     <dl>
@@ -76,6 +93,14 @@ body {
       </tr>
     </table>
     
+  </div>
+  
+  <input type="button" id="step" value="step" />
+  <div id="mm">
+    <table border="1" id="mem" celpadding="0">
+      <tr></tr>
+      <tr></tr>
+    </table>
   </div>
 
 </body>
