@@ -300,6 +300,15 @@ window.onload = function() {
       console.debug(e)
     }
   }
+
+  // tests.
+  stela.init();
+  stela.field("1001001010100")
+  stela.field("1001001010100")
+  stela.field("1001001010100")
+  
+  
+
 }
 
 
